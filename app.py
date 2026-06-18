@@ -82,7 +82,7 @@ def init_db():
     conn.close()
 
 def dict_from_row(row):
-    """Convert sqlite3.Row to dictionary"""d
+    """Convert sqlite3.Row to dictionary"""
     if row is None:
         return None
     return dict(row)
