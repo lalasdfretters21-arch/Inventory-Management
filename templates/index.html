@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IT Equipment Inventory Management System">
+    <meta name="theme-color" content="#2c3e50">
+    <title>IT Equipment Inventory System</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232c3e50' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='120' fill='white' font-weight='bold'>📦</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --border: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: var(--dark);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #2c3e50;
+        }
+
+        .status-badge {
+            background: var(--success);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.offline {
+            background: var(--warning);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Search and Filters */
+        .search-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .search-bar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Table */
+        .table-wrapper {
+            background: white;
+            border-radius: 8px;
+            overflow-x: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--primary);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--light);
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btns button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            color: var(--dark);
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--dark);
+        }
+
+        .close-btn:hover {
+            color: var(--danger);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--light);
+            border-top: 3px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .empty-state h3 {
+            margin: 10px 0;
+            color: var(--dark);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            margin-top: 40px;
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            header h1 {
+                justify-content: center;
+            }
+
+            .header-actions {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .table-wrapper {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+
+            .action-btns {
+                flex-direction: column;
+            }
+        }
+
+        .install-prompt {
+            background: var(--secondary);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            display: none;
+            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .install-prompt.show {
+            display: flex;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .user-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-badge:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .user-avatar-placeholder {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .role-badge {
+            background: var(--warning);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-badge.admin {
+            background: var(--danger);
+        }
+
+        .tab-btn.admin-tab {
+            background: #8e44ad;
+            color: white;
+            border-color: #8e44ad;
+        }
+
+        .tab-btn.admin-tab.active {
+            background: #732d91;
+            border-color: #732d91;
+        }
+
+        .admin-user-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .admin-user-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .admin-user-header:hover {
+            background: #f9f9f9;
+        }
+
+        .admin-user-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .admin-user-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .admin-inventory-panel {
+            display: none;
+            border-top: 1px solid #ecf0f1;
+            padding: 0;
+        }
+
+        .admin-inventory-panel.show {
+            display: block;
+        }
+
+        .admin-inventory-panel table {
+            font-size: 13px;
+        }
+
+        .admin-inventory-panel th,
+        .admin-inventory-panel td {
+            padding: 10px 15px;
+        }
+
+        /* Profile modal */
+        .profile-modal-content {
+            max-width: 560px;
+        }
+
+        .profile-avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .profile-avatar-preview {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--secondary);
+        }
+
+        .profile-avatar-preview.placeholder {
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--secondary);
+            border: 3px solid var(--border);
+        }
+
+        .profile-avatar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .profile-avatar-actions .btn {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .profile-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--light);
+        }
+
+        .profile-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .profile-section h3 {
+            color: var(--primary);
+            font-size: 15px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 16px;
+        }
+
+        .profile-meta span {
+            background: var(--light);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .profile-danger-zone {
+            background: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .profile-danger-zone p {
+            font-size: 13px;
+            color: #721c24;
+            margin-bottom: 12px;
+        }
+
+        .profile-danger-zone .btn-danger:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .profile-item-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 10px 14px;
+            border-radius: 5px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        #avatarInput {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .profile-avatar-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IT Equipment Inventory System</h1>
+            <div class="header-actions">
+                <div class="user-info" id="userInfo">
+                    <span class="user-badge">Loading...</span>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+                <button class="btn btn-primary" id="installBtn" style="display:none;">Install App</button>
+                <button class="btn btn-primary" onclick="openAddModal()">+ Add Item</button>
+            </div>
+        </header>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('inventory')">Inventory</button>
+            <button class="tab-btn" onclick="switchTab('reports')">Reports</button>
+            <button class="tab-btn" onclick="switchTab('admin')">Entries</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>Total Items</h3>
+                    <div class="value"><div class="loading"></div></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Value</h3>
+                    <div class="value"><div class="loading"></div></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Locations</h3>
+                    <div class="value"><div class="loading"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search by description, model, or RV#..." onkeyup="filterInventory()">
+                <input type="text" id="locationFilter" placeholder="Filter by location..." onkeyup="filterInventory()">
+                <button class="btn btn-secondary" onclick="filterInventory()">Search</button>
+                <button class="btn btn-success" onclick="exportData()">Export CSV</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Model</th>
+                            <th>RV#</th>
+                            <th>PO#</th>
+                            <th>Location</th>
+                            <th>Amount</th>
+                            <th>Date Acquired</th>
+                            <th>Acquired By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="9" class="empty-state"><h3>Loading...</h3></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="form-card">
+                <h2>Generate Reports</h2>
+                <p style="margin-top: 10px; color: #7f8c8d;">Export inventory data for analysis and archival purposes.</p>
+                <div style="margin-top: 20px; display: grid; gap: 10px;">
+                    <button class="btn btn-success" onclick="exportData()" style="width: 100%;">📊 Export as CSV</button>
+                    <button class="btn btn-secondary" onclick="printInventory()" style="width: 100%;">🖨️ Print Inventory</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin" class="tab-content">
+            <div class="form-card">
+                <h2>User Management</h2>
+                <p style="margin-top: 10px; color: #7f8c8d;">View all users and the inventory items each person has entered.</p>
+                <div id="adminUsersList" style="margin-top: 20px;">
+                    <p class="empty-state">Loading users...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Item</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="itemForm" onsubmit="handleFormSubmit(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" required placeholder="e.g., Laptop, Printer, Monitor">
+                    </div>
+				<div class="form-group">
+					<label for="model">Model</label>
+					<input type="text" id="model" required placeholder="e.g., ThinkPad X13, HP LaserJet Pro">
+                </div>
+
+                <div class="form-group">
+                    <label for="specs">Specifications</label>
+                    <textarea id="specs" required placeholder="e.g., Intel i7, 16GB RAM, 512GB SSD"></textarea>
+					</div>
+				</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rvNumber">RV #</label>
+                        <input type="text" id="rvNumber" required placeholder="Receiving Voucher Number">
+                    </div>
+                    <div class="form-group">
+                        <label for="poNumber">PO #</label>
+                        <input type="text" id="poNumber" required placeholder="Purchase Order Number">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dateAcquired">Date Acquired</label>
+                        <input type="date" id="dateAcquired" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" placeholder="e.g., 50000.00">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="acquiredBy">Acquired by</label>
+                        <input type="text" id="acquiredBy" required placeholder="Name of person">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationInstalled">Location Installed</label>
+                        <input type="text" id="locationInstalled" required placeholder="e.g., Building A, Room 101">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="remarks">Remarks</label>
+                    <textarea id="remarks" placeholder="Any additional notes..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">Save Item</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content profile-modal-content">
+            <div class="modal-header">
+                <h2>My Profile</h2>
+                <button class="close-btn" onclick="closeProfileModal()">&times;</button>
+            </div>
+
+            <div class="profile-avatar-section">
+                <div id="profileAvatarPreview" class="profile-avatar-preview placeholder">?</div>
+                <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp">
+                <div class="profile-avatar-actions">
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('avatarInput').click()">Change Photo</button>
+                    <button type="button" class="btn btn-secondary" id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;">Remove Photo</button>
+                </div>
+            </div>
+
+            <div class="profile-meta" id="profileMeta"></div>
+
+            <form id="profileForm" onsubmit="handleProfileSubmit(event)">
+                <div class="profile-section">
+                    <h3>Account Details</h3>
+                    <div class="form-group">
+                        <label for="profileUsername">Username</label>
+                        <input type="text" id="profileUsername" required placeholder="Your username">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileFullName">Full Name</label>
+                        <input type="text" id="profileFullName" required placeholder="Your display name">
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%;">Save Changes</button>
+                </div>
+            </form>
+
+            <form id="passwordForm" onsubmit="handlePasswordSubmit(event)">
+                <div class="profile-section">
+                    <h3>Change Password</h3>
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" required placeholder="Enter current password">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" required minlength="6" placeholder="At least 6 characters">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" required minlength="6" placeholder="Re-enter new password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">Update Password</button>
+                </div>
+            </form>
+
+            <div class="profile-section">
+                <h3>Delete Account</h3>
+                <div class="profile-danger-zone">
+                    <div id="deleteAccountWarning" class="profile-item-warning" style="display:none;"></div>
+                    <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+                    <div class="form-group">
+                        <label for="deletePassword">Confirm with your password</label>
+                        <input type="password" id="deletePassword" placeholder="Enter password to confirm deletion">
+                    </div>
+                    <button type="button" class="btn btn-danger" id="deleteAccountBtn" onclick="deleteAccount()" style="width: 100%;">Delete My Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>IT Equipment Inventory System</p>
+        <p>Last sync: <span id="lastSync">Never</span></p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
