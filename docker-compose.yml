@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: inventory_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: inventory_system
+      MYSQL_USER: inventory_user
+      MYSQL_PASSWORD: inventory_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: inventory_mssql
+    environment:
+      MSSQL_SA_PASSWORD: "Inventory_system1"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - inventory_network
+
+  app:
+    build: .
+    container_name: inventory_app
+    environment:
+      DB_HOST: mysql
+      DB_USER: inventory_user
+      DB_PASSWORD: inventory_password
+      DB_NAME: inventory_system
+      DB_PORT: 3306
+      FLASK_DEBUG: "false"
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - inventory_network
+    volumes:
+      - ./:/app
+
+volumes:
+  mysql_data:
+
+networks:
+  inventory_network:
