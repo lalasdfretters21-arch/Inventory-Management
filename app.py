@@ -22,6 +22,14 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'inventory-dev-secret-change-in-production')
 CORS(app, supports_credentials=True)
 
+# Option A: Initialize DB on startup when requested (safe: uses IF NOT EXISTS)
+if os.environ.get('INIT_DB_ON_STARTUP', 'false').lower() in ('1', 'true', 'yes'):
+    try:
+        init_db()  # function defined later in this file
+    except Exception as e:
+        # Don't crash the app on startup if DB init fails; log and continue
+        print(f"Database initialization on startup failed: {e}")
+
 # PostgreSQL Database Configuration
 DB_CONFIG = {
     'host': os.environ.get('DB_HOST', 'localhost'),
@@ -33,6 +41,11 @@ DB_CONFIG = {
 
 def get_db_connection():
     try:
+        # Prefer a full DATABASE_URL if provided by the platform (Render provides this)
+        database_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
+        if database_url:
+            # psycopg2.connect accepts a connection string (DSN/URL) directly
+            return psycopg2.connect(database_url)
         conn = psycopg2.connect(**DB_CONFIG)
         return conn
     except Error as err:
