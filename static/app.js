@@ -865,10 +865,6 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
-function updateLastSync() {
-    document.getElementById('lastSync').textContent = new Date().toLocaleTimeString();
-}
-
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
