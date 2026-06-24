@@ -810,16 +810,23 @@
         </div>
 
         <!-- Reports Tab -->
-        <div id="reports" class="tab-content">
-            <div class="form-card">
-                <h2>Generate Reports</h2>
-                <p style="margin-top: 10px; color: #7f8c8d;">Export inventory data for analysis and archival purposes.</p>
-                <div style="margin-top: 20px; display: grid; gap: 10px;">
-                    <button class="btn btn-success" onclick="exportData()" style="width: 100%;">📊 Export as CSV</button>
-                    <button class="btn btn-secondary" onclick="printInventory()" style="width: 100%;">🖨️ Print Inventory</button>
-                </div>
-            </div>
-        </div>
+		<div id="reports" class="tab-content">
+			<div class="form-card">
+				<h2>Generate Reports</h2>
+					<p style="margin-top: 10px; color: #7f8c8d;">Export inventory data for analysis and archival purposes.</p>
+		                <div style="margin-top: 20px; display: grid; gap: 10px;">
+							<select id="exportCategory" style="padding: 10px; font-size: 14px;">
+								<option value="all">All items</option>
+								<option value="devices">Devices</option>
+								<option value="consumables">Consumables</option>
+							</select>
+							
+						<button class="btn btn-success" onclick="exportData(document.getElementById('exportCategory').value)" style="width: 100%;">📊 Export as CSV</button>
+						<button class="btn btn-secondary" onclick="printInventory(document.getElementById('exportCategory').value)" style="width: 100%;">🖨️ Print Inventory</button>
+						
+						</div>
+					</div>
+				</div>
 
         <!-- Admin Tab -->
         <div id="admin" class="tab-content">
