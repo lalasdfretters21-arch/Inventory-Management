@@ -520,40 +520,6 @@ async function removeAvatar() {
     }
 }
 
-async function deleteAccount() {
-    const password = document.getElementById('deletePassword').value;
-    const itemCount = currentUser?.item_count || 0;
-
-    if (itemCount > 0) {
-        showAlert('Remove your listed items before deleting your account', 'danger');
-        return;
-    }
-
-    if (!password) {
-        showAlert('Enter your password to confirm account deletion', 'danger');
-        return;
-    }
-
-    if (!confirm('Are you absolutely sure? This will permanently delete your account.')) return;
-
-    try {
-        const response = await apiFetch('/api/auth/me', {
-            method: 'DELETE',
-            body: JSON.stringify({ password })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to delete account');
-
-        window.location.href = '/login';
-    } catch (error) {
-        console.error('Error deleting account:', error);
-        if (error.message !== 'Session expired') {
-            showAlert(error.message, 'danger');
-        }
-    }
-}
-
 // Admin Panel
 async function loadAdminUsers() {
     const container = document.getElementById('adminUsersList');
@@ -771,14 +737,16 @@ async function deleteItem(id) {
     }
 }
 
-async function exportData() {
+// --- Modified exportData to accept category/type and call filtered endpoint ---
+async function exportData(type = 'all') {
     try {
         if (!isOnline) {
             showAlert('Export requires online connection', 'warning');
             return;
         }
 
-        const response = await fetch('/api/inventory/export/csv', { credentials: 'same-origin' });
+        const url = `/api/inventory/export/csv?type=${encodeURIComponent(type)}`;
+        const response = await fetch(url, { credentials: 'same-origin' });
         if (response.status === 401) {
             window.location.href = '/login';
             return;
@@ -788,13 +756,13 @@ async function exportData() {
         const csv = await response.text();
 
         const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
+        const urlBlob = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+        a.href = urlBlob;
+        a.download = `inventory_${type}_${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(urlBlob);
         document.body.removeChild(a);
 
         showAlert('Data exported successfully!', 'success');
@@ -804,13 +772,50 @@ async function exportData() {
     }
 }
 
-function printInventory() {
-    const table = document.getElementById('inventoryTable').outerHTML;
-    const printWindow = window.open('', '', 'width=1200,height=600');
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>IT Equipment Inventory</title>
+// --- Modified printInventory to fetch filtered JSON and build printable table ---
+async function printInventory(type = 'all') {
+    try {
+        if (!isOnline) {
+            showAlert('Print requires online connection', 'warning');
+            return;
+        }
+
+        const resp = await apiFetch(`/api/inventory?type=${encodeURIComponent(type)}`);
+        if (!resp.ok) {
+            if (resp.status === 401) { window.location.href = '/login'; return; }
+            throw new Error('Failed to load inventory for printing');
+        }
+        const items = await resp.json();
+
+        const rows = items.map(it => `
+            <tr>
+                <td>${escapeHtml(it.description || '')}</td>
+                <td>${escapeHtml(it.model || '')}</td>
+                <td>${escapeHtml(it.rv_number || '')}</td>
+                <td>${escapeHtml(it.po_number || '')}</td>
+                <td>${escapeHtml(it.location_installed || '')}</td>
+                <td>${escapeHtml(it.amount || '')}</td>
+                <td>${escapeHtml(it.date_acquired || '')}</td>
+                <td>${escapeHtml(it.acquired_by || '')}</td>
+            </tr>
+        `).join('');
+
+        const tableHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th><th>Model</th><th>RV#</th><th>PO#</th>
+                        <th>Location</th><th>Amount</th><th>Date Acquired</th><th>Acquired By</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+
+        const printWindow = window.open('', '', 'width=1200,height=600');
+        printWindow.document.write(`
+            <html><head>
+            <title>IT Equipment Inventory Report</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; }
                 h1 { color: #2c3e50; }
@@ -818,22 +823,22 @@ function printInventory() {
                 th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
                 th { background-color: #2c3e50; color: white; }
                 tr:nth-child(even) { background-color: #f9f9f9; }
-                @media print {
-                    body { margin: 0; }
-                    .no-print { display: none; }
-                }
-            </style>
-        </head>
-        <body>
-            <h1>IT Equipment Inventory Report</h1>
-            <p>Generated: ${new Date().toLocaleString()}</p>
-            <p>Generated by: ${currentUser ? escapeHtml(currentUser.full_name) : 'Unknown'}</p>
-            ${table}
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+            </style></head>
+            <body>
+                <h1>IT Equipment Inventory Report</h1>
+                <p>Category: ${escapeHtml(type)}</p>
+                <p>Generated: ${new Date().toLocaleString()}</p>
+                ${tableHtml}
+            </body></html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    } catch (error) {
+        console.error('Error printing inventory:', error);
+        showAlert('Failed to print inventory', 'danger');
+    }
 }
 
 function showAlert(message, type = 'info') {
@@ -863,6 +868,10 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function updateLastSync() {
+    document.getElementById('lastSync').textContent = new Date().toLocaleTimeString();
 }
 
 document.addEventListener('keydown', (e) => {
