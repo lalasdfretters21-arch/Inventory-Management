@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2c3e50">
-    <title>Login - IT Equipment Inventory</title>
+    <title>IT Equipment Inventory</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -21,60 +21,138 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 420px;
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-header h1 {
-            color: var(--primary);
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-
-        .login-header p {
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 24px;
-            border-radius: 5px;
-            overflow: hidden;
-            border: 2px solid var(--border);
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: #f8f9fa;
             color: var(--dark);
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: flex-end;
+            z-index: 10;
+        }
+
+        .btn-login {
+            padding: 10px 24px;
+            border: 2px solid white;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s ease, color 0.2s ease;
+            transition: background 0.2s ease;
         }
 
-        .auth-tab.active {
-            background: var(--secondary);
+        .btn-login:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .landing-center {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 20px 40px;
+        }
+
+        .landing-card {
+            text-align: center;
+            max-width: 520px;
+            width: 100%;
+        }
+
+        .landing-card h1 {
             color: white;
+            font-size: 32px;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .landing-card p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .btn-continue {
+            padding: 16px 48px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-continue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-continue:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Login Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 36px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--dark);
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: var(--danger);
         }
 
         .form-group {
@@ -125,14 +203,6 @@
             cursor: not-allowed;
         }
 
-        .btn-success {
-            background: var(--success);
-        }
-
-        .btn-success:hover {
-            background: #219a52;
-        }
-
         .alert {
             padding: 12px 16px;
             border-radius: 5px;
@@ -149,93 +219,95 @@
             border: 1px solid #f5c6cb;
         }
 
-        .auth-form {
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
+        .login-subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="login-header">
+    <div class="top-bar">
+        <button type="button" class="btn-login" onclick="openLoginModal()">Login</button>
+    </div>
+
+    <div class="landing-center">
+        <div class="landing-card">
             <h1>IT Equipment Inventory</h1>
-            <p id="authSubtitle">Sign in to manage inventory entries</p>
+            <p>Browse the inventory system to view equipment records and dashboard statistics.</p>
+            <button type="button" class="btn-continue" id="continueBtn" onclick="continueAsViewer()">Continue</button>
         </div>
+    </div>
 
-        <div class="auth-tabs">
-            <button type="button" class="auth-tab active" data-mode="login">Sign In</button>
-            <button type="button" class="auth-tab" data-mode="signup">Sign Up</button>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Admin Login</h2>
+                <button type="button" class="close-btn" onclick="closeLoginModal()">&times;</button>
+            </div>
+            <p class="login-subtitle">Sign in to manage inventory entries</p>
+            <div id="alert" class="alert"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required autocomplete="username" placeholder="Enter your username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn" id="loginBtn">Sign In</button>
+            </form>
         </div>
-
-        <div id="alert" class="alert"></div>
-
-        <form id="loginForm" class="auth-form active">
-            <div class="form-group">
-                <label for="loginUsername">Username</label>
-                <input type="text" id="loginUsername" required autocomplete="username" placeholder="Enter your username">
-            </div>
-            <div class="form-group">
-                <label for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter your password">
-            </div>
-            <button type="submit" class="btn" id="loginBtn">Sign In</button>
-        </form>
-
-        <form id="signupForm" class="auth-form">
-            <div class="form-group">
-                <label for="signupFullName">Full Name</label>
-                <input type="text" id="signupFullName" required autocomplete="name" placeholder="Enter your full name">
-            </div>
-            <div class="form-group">
-                <label for="signupUsername">Username</label>
-                <input type="text" id="signupUsername" required autocomplete="username" placeholder="Choose a username">
-            </div>
-            <div class="form-group">
-                <label for="signupPassword">Password</label>
-                <input type="password" id="signupPassword" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters">
-            </div>
-            <div class="form-group">
-                <label for="signupConfirmPassword">Confirm Password</label>
-                <input type="password" id="signupConfirmPassword" required minlength="6" autocomplete="new-password" placeholder="Re-enter your password">
-            </div>
-            <button type="submit" class="btn btn-success" id="signupBtn">Create Account</button>
-        </form>
     </div>
 
     <script>
         const alertEl = document.getElementById('alert');
-        const authSubtitle = document.getElementById('authSubtitle');
+        const loginModal = document.getElementById('loginModal');
         const loginForm = document.getElementById('loginForm');
-        const signupForm = document.getElementById('signupForm');
-        const authTabs = document.querySelectorAll('.auth-tab');
 
-        function showAlert(message, isError = true) {
+        function showAlert(message) {
             alertEl.textContent = message;
-            alertEl.className = `alert ${isError ? 'alert-danger' : ''} show`;
+            alertEl.className = 'alert alert-danger show';
         }
 
         function clearAlert() {
             alertEl.classList.remove('show');
         }
 
-        function switchAuthMode(mode) {
-            authTabs.forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.mode === mode);
-            });
-            loginForm.classList.toggle('active', mode === 'login');
-            signupForm.classList.toggle('active', mode === 'signup');
-            authSubtitle.textContent = mode === 'login'
-                ? 'Sign in to manage inventory entries'
-                : 'Create an admin account to get started';
+        function openLoginModal() {
+            loginModal.classList.add('show');
             clearAlert();
         }
 
-        authTabs.forEach(tab => {
-            tab.addEventListener('click', () => switchAuthMode(tab.dataset.mode));
-        });
+        function closeLoginModal() {
+            loginModal.classList.remove('show');
+            clearAlert();
+        }
+
+        async function continueAsViewer() {
+            const btn = document.getElementById('continueBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                const response = await fetch('/api/auth/viewer', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to continue');
+                }
+
+                window.location.href = '/';
+            } catch (error) {
+                alert(error.message);
+                btn.disabled = false;
+                btn.textContent = 'Continue';
+            }
+        }
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -270,45 +342,12 @@
             }
         });
 
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('signupBtn');
-            const password = document.getElementById('signupPassword').value;
-            const confirmPassword = document.getElementById('signupConfirmPassword').value;
+        loginModal.addEventListener('click', (e) => {
+            if (e.target === loginModal) closeLoginModal();
+        });
 
-            if (password !== confirmPassword) {
-                showAlert('Passwords do not match');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Creating account...';
-            clearAlert();
-
-            try {
-                const response = await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        full_name: document.getElementById('signupFullName').value,
-                        username: document.getElementById('signupUsername').value,
-                        password
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Sign up failed');
-                }
-
-                window.location.href = '/';
-            } catch (error) {
-                showAlert(error.message);
-                btn.disabled = false;
-                btn.textContent = 'Create Account';
-            }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLoginModal();
         });
     </script>
 </body>

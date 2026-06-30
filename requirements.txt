@@ -5,6 +5,4 @@ Werkzeug==2.3.7
 setuptools>=68.0.0
 wheel>=0.40.0
 gunicorn==25.3.0
-mysql-connector-python==8.0.33
-PyMySQL==1.1.0
-pyodbc==4.0.39
+psycopg2==2.9.11

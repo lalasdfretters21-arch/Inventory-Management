@@ -57,6 +57,28 @@ TABLES['inventory'] = (
     ") ENGINE=InnoDB"
 )
 
+TABLES['deleted_inventory'] = (
+    "CREATE TABLE IF NOT EXISTS deleted_inventory ("
+    "  id INT AUTO_INCREMENT PRIMARY KEY,"
+    "  original_id INT,"
+    "  description VARCHAR(500),"
+    "  model VARCHAR(255),"
+    "  specs TEXT,"
+    "  date_acquired DATE,"
+    "  amount DECIMAL(10, 2),"
+    "  rv_number VARCHAR(255),"
+    "  po_number VARCHAR(255),"
+    "  acquired_by VARCHAR(255),"
+    "  location_installed VARCHAR(500),"
+    "  remarks TEXT,"
+    "  date_entry DATETIME,"
+    "  entry_by VARCHAR(255),"
+    "  user_id INT,"
+    "  deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+    "  deleted_by VARCHAR(255)"
+    ") ENGINE=InnoDB"
+)
+
 
 def main():
     try:

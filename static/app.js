@@ -6,12 +6,20 @@ let currentEditId = null;
 let deferredPrompt = null;
 let isOnline = navigator.onLine;
 let currentUser = null;
+let isViewer = false;
+let isAdmin = false;
+let isSuperAdmin = false;
+
+function isOperator() {
+    return isAdmin || isSuperAdmin;
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     const authenticated = await checkAuth();
     if (!authenticated) return;
 
+    applyRoleUI();
     registerServiceWorker();
     setupEventListeners();
     loadInventory();
@@ -30,6 +38,9 @@ async function checkAuth() {
         }
         const data = await response.json();
         currentUser = data.user;
+        isViewer = currentUser.role === 'viewer';
+        isAdmin = currentUser.role === 'admin';
+        isSuperAdmin = currentUser.role === 'super_admin';
         displayUserInfo();
         return true;
     } catch (error) {
@@ -38,7 +49,45 @@ async function checkAuth() {
     }
 }
 
+function applyRoleUI() {
+    const adminOnlyTabs = document.querySelectorAll('.admin-only-tab');
+    const adminOnlyBtns = document.querySelectorAll('.admin-only-btn');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const backBtn = document.getElementById('backBtn');
+    const userInfo = document.getElementById('userInfo');
+    const lastCol = document.getElementById('inventoryLastCol');
+    const createAdminSection = document.getElementById('createAdminSection');
+
+    if (isViewer) {
+        adminOnlyTabs.forEach(el => el.style.display = 'none');
+        adminOnlyBtns.forEach(el => el.style.display = 'none');
+        if (addItemBtn) addItemBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (backBtn) backBtn.style.display = 'inline-block';
+        if (userInfo) userInfo.style.display = 'none';
+        if (lastCol) lastCol.textContent = 'Entry By';
+    } else {
+        adminOnlyTabs.forEach(el => el.style.display = '');
+        adminOnlyBtns.forEach(el => el.style.display = '');
+        if (addItemBtn) addItemBtn.style.display = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        if (backBtn) backBtn.style.display = 'none';
+        if (userInfo) userInfo.style.display = '';
+        if (lastCol) lastCol.textContent = 'Actions';
+        if (createAdminSection) {
+            createAdminSection.style.display = isSuperAdmin ? 'block' : 'none';
+        }
+    }
+}
+
+function goToLanding() {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+        .finally(() => { window.location.href = '/login'; });
+}
+
 function displayUserInfo() {
+    if (isViewer) return;
     const userInfo = document.getElementById('userInfo');
     const initial = currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : '?';
     const avatarHtml = currentUser.profile_pic
@@ -197,6 +246,8 @@ function setupInstallPrompt() {
 }
 
 function switchTab(tabName) {
+    if (isViewer && !['dashboard', 'inventory'].includes(tabName)) return;
+
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -206,7 +257,8 @@ function switchTab(tabName) {
     });
 
     document.getElementById(tabName).classList.add('active');
-    event.target.classList.add('active');
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (tabBtn) tabBtn.classList.add('active');
 
     if (tabName === 'inventory') {
         loadInventory();
@@ -214,6 +266,8 @@ function switchTab(tabName) {
         loadStats();
     } else if (tabName === 'admin') {
         loadAdminUsers();
+    } else if (tabName === 'logs') {
+        loadDeletedLogs();
     }
 }
 
@@ -248,13 +302,30 @@ async function loadInventory() {
 
 function displayInventory(items) {
     const tbody = document.getElementById('tableBody');
+    const emptyMsg = isViewer
+        ? 'No items found'
+        : 'Click "Add Item" to get started';
 
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><h3>No items found</h3><p>Click "Add Item" to get started</p></td></tr>';
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><h3>No items found</h3><p>${emptyMsg}</p></td></tr>`;
         return;
     }
 
-    tbody.innerHTML = items.map(item => `
+    tbody.innerHTML = items.map(item => {
+        let lastCol;
+        if (isViewer) {
+            lastCol = `<td>${item.entry_by ? escapeHtml(item.entry_by) : '-'}</td>`;
+        } else {
+            const canEdit = isOperator() && item.user_id === currentUser.id;
+            lastCol = canEdit
+                ? `<td><div class="action-btns">
+                    <button class="btn btn-secondary" onclick="openEditModal(${item.id})">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete</button>
+                   </div></td>`
+                : `<td>${item.entry_by ? escapeHtml(item.entry_by) : '-'}</td>`;
+        }
+
+        return `
         <tr>
             <td><strong>${escapeHtml(item.description)}</strong></td>
             <td>${item.model ? escapeHtml(item.model) : '-'}</td>
@@ -264,14 +335,9 @@ function displayInventory(items) {
             <td>${item.amount ? '₱' + formatNumber(item.amount) : '-'}</td>
             <td>${item.date_acquired ? new Date(item.date_acquired).toLocaleDateString() : '-'}</td>
             <td>${item.acquired_by ? escapeHtml(item.acquired_by) : '-'}</td>
-            <td>
-                <div class="action-btns">
-                    <button class="btn btn-secondary" onclick="openEditModal(${item.id})">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+            ${lastCol}
+        </tr>`;
+    }).join('');
 }
 
 function filterInventory() {
@@ -359,6 +425,7 @@ function renderDeleteAccountState(user) {
 }
 
 async function openProfileModal() {
+    if (isViewer) return;
     if (!isOnline) {
         showAlert('Profile editing requires an online connection', 'warning');
         return;
@@ -520,40 +587,6 @@ async function removeAvatar() {
     }
 }
 
-async function deleteAccount() {
-    const password = document.getElementById('deletePassword').value;
-    const itemCount = currentUser?.item_count || 0;
-
-    if (itemCount > 0) {
-        showAlert('Remove your listed items before deleting your account', 'danger');
-        return;
-    }
-
-    if (!password) {
-        showAlert('Enter your password to confirm account deletion', 'danger');
-        return;
-    }
-
-    if (!confirm('Are you absolutely sure? This will permanently delete your account.')) return;
-
-    try {
-        const response = await apiFetch('/api/auth/me', {
-            method: 'DELETE',
-            body: JSON.stringify({ password })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to delete account');
-
-        window.location.href = '/login';
-    } catch (error) {
-        console.error('Error deleting account:', error);
-        if (error.message !== 'Session expired') {
-            showAlert(error.message, 'danger');
-        }
-    }
-}
-
 // Admin Panel
 async function loadAdminUsers() {
     const container = document.getElementById('adminUsersList');
@@ -575,6 +608,7 @@ async function loadAdminUsers() {
                     <div class="admin-user-meta">
                         <strong>${escapeHtml(user.full_name)}</strong>
                         <span style="color: #95a5a6; font-size: 13px;">@${escapeHtml(user.username)}</span>
+                        <span class="role-badge ${user.role === 'super_admin' ? 'admin' : ''}">${escapeHtml(user.role || 'admin')}</span>
                     </div>
                     <div class="admin-user-stats">
                         <span>${user.item_count} item${user.item_count !== 1 ? 's' : ''}</span>
@@ -651,7 +685,70 @@ async function toggleUserInventory(userId) {
     }
 }
 
+async function handleCreateAdmin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('createAdminBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    try {
+        const response = await apiFetch('/api/admin/users', {
+            method: 'POST',
+            body: JSON.stringify({
+                full_name: document.getElementById('newAdminFullName').value.trim(),
+                username: document.getElementById('newAdminUsername').value.trim(),
+                password: document.getElementById('newAdminPassword').value
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to create admin');
+
+        document.getElementById('createAdminForm').reset();
+        showAlert('Admin account created successfully!', 'success');
+        loadAdminUsers();
+    } catch (error) {
+        console.error('Error creating admin:', error);
+        if (error.message !== 'Session expired') {
+            showAlert(error.message, 'danger');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Admin';
+    }
+}
+
+async function loadDeletedLogs() {
+    const tbody = document.getElementById('logsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><h3>Loading...</h3></td></tr>';
+
+    try {
+        const response = await apiFetch('/api/logs/deleted');
+        if (!response.ok) throw new Error('Failed to load logs');
+        const logs = await response.json();
+
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><h3>No deleted items</h3></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = logs.map(log => `
+            <tr>
+                <td><strong>${escapeHtml(log.description || '-')}</strong></td>
+                <td>${log.rv_number ? escapeHtml(log.rv_number) : '-'}</td>
+                <td>${log.entry_by ? escapeHtml(log.entry_by) : '-'}</td>
+                <td>${log.deleted_by ? escapeHtml(log.deleted_by) : '-'}</td>
+                <td>${log.deleted_at ? new Date(log.deleted_at).toLocaleString() : '-'}</td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><h3>Failed to load logs</h3></td></tr>';
+    }
+}
+
 function openAddModal() {
+    if (!isOperator()) return;
     currentEditId = null;
     document.getElementById('modalTitle').textContent = 'Add New Item';
     document.getElementById('itemForm').reset();
@@ -659,6 +756,7 @@ function openAddModal() {
 }
 
 async function openEditModal(id) {
+    if (!isOperator()) return;
     try {
         if (!isOnline) {
             showAlert('Editing requires online connection', 'warning');
@@ -699,6 +797,7 @@ function closeModal() {
 
 async function handleFormSubmit(e) {
     e.preventDefault();
+    if (!isOperator()) return;
 
     if (!isOnline && !currentEditId) {
         showAlert('Adding new items requires online connection', 'warning');
@@ -746,6 +845,7 @@ async function handleFormSubmit(e) {
 }
 
 async function deleteItem(id) {
+    if (!isOperator()) return;
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
@@ -771,14 +871,17 @@ async function deleteItem(id) {
     }
 }
 
-async function exportData() {
+// --- Modified exportData to accept category/type and call filtered endpoint ---
+async function exportData(type = 'all') {
+    if (!isOperator()) return;
     try {
         if (!isOnline) {
             showAlert('Export requires online connection', 'warning');
             return;
         }
 
-        const response = await fetch('/api/inventory/export/csv', { credentials: 'same-origin' });
+        const url = `/api/inventory/export/csv?type=${encodeURIComponent(type)}`;
+        const response = await fetch(url, { credentials: 'same-origin' });
         if (response.status === 401) {
             window.location.href = '/login';
             return;
@@ -788,13 +891,13 @@ async function exportData() {
         const csv = await response.text();
 
         const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
+        const urlBlob = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+        a.href = urlBlob;
+        a.download = `inventory_${type}_${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(urlBlob);
         document.body.removeChild(a);
 
         showAlert('Data exported successfully!', 'success');
@@ -804,13 +907,51 @@ async function exportData() {
     }
 }
 
-function printInventory() {
-    const table = document.getElementById('inventoryTable').outerHTML;
-    const printWindow = window.open('', '', 'width=1200,height=600');
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>IT Equipment Inventory</title>
+// --- Modified printInventory to fetch filtered JSON and build printable table ---
+async function printInventory(type = 'all') {
+    if (!isOperator()) return;
+    try {
+        if (!isOnline) {
+            showAlert('Print requires online connection', 'warning');
+            return;
+        }
+
+        const resp = await apiFetch(`/api/inventory?type=${encodeURIComponent(type)}`);
+        if (!resp.ok) {
+            if (resp.status === 401) { window.location.href = '/login'; return; }
+            throw new Error('Failed to load inventory for printing');
+        }
+        const items = await resp.json();
+
+        const rows = items.map(it => `
+            <tr>
+                <td>${escapeHtml(it.description || '')}</td>
+                <td>${escapeHtml(it.model || '')}</td>
+                <td>${escapeHtml(it.rv_number || '')}</td>
+                <td>${escapeHtml(it.po_number || '')}</td>
+                <td>${escapeHtml(it.location_installed || '')}</td>
+                <td>${escapeHtml(it.amount || '')}</td>
+                <td>${escapeHtml(it.date_acquired || '')}</td>
+                <td>${escapeHtml(it.acquired_by || '')}</td>
+            </tr>
+        `).join('');
+
+        const tableHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th><th>Model</th><th>RV#</th><th>PO#</th>
+                        <th>Location</th><th>Amount</th><th>Date Acquired</th><th>Acquired By</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+
+        const printWindow = window.open('', '', 'width=1200,height=600');
+        printWindow.document.write(`
+            <html><head>
+            <title>IT Equipment Inventory Report</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; }
                 h1 { color: #2c3e50; }
@@ -818,22 +959,22 @@ function printInventory() {
                 th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
                 th { background-color: #2c3e50; color: white; }
                 tr:nth-child(even) { background-color: #f9f9f9; }
-                @media print {
-                    body { margin: 0; }
-                    .no-print { display: none; }
-                }
-            </style>
-        </head>
-        <body>
-            <h1>IT Equipment Inventory Report</h1>
-            <p>Generated: ${new Date().toLocaleString()}</p>
-            <p>Generated by: ${currentUser ? escapeHtml(currentUser.full_name) : 'Unknown'}</p>
-            ${table}
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+            </style></head>
+            <body>
+                <h1>IT Equipment Inventory Report</h1>
+                <p>Category: ${escapeHtml(type)}</p>
+                <p>Generated: ${new Date().toLocaleString()}</p>
+                ${tableHtml}
+            </body></html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    } catch (error) {
+        console.error('Error printing inventory:', error);
+        showAlert('Failed to print inventory', 'danger');
+    }
 }
 
 function showAlert(message, type = 'info') {
@@ -872,7 +1013,7 @@ function updateLastSync() {
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
-        openAddModal();
+        if (isOperator()) openAddModal();
     }
     if (e.key === 'Escape') {
         closeModal();
