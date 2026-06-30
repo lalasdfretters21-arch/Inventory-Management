@@ -300,6 +300,15 @@ async function loadInventory() {
 
         displayInventory(items);
         updateLastSync();
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+
+        const offlineItems = await getFromIndexedDB();
+        if (offlineItems.length > 0) {
+            displayInventory(offlineItems);
+        } else if (error.message !== 'Session expired') {
+            showAlert('Failed to load inventory', 'danger');
+        }
     }
 }
 
