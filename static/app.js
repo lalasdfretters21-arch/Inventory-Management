@@ -306,7 +306,7 @@ async function loadInventory() {
         const offlineItems = await getFromIndexedDB();
         if (offlineItems.length > 0) {
             displayInventory(offlineItems);
-            showAlert('Loaded from offline cache', 'warning');
+            showAlert('Loading inventory please wait', 'warning');
         } else if (error.message !== 'Session expired') {
             showAlert('Failed to load inventory', 'danger');
         }
