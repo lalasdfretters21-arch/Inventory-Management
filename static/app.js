@@ -3,6 +3,7 @@ const APP_NAME = 'IT Equipment Inventory';
 const DB_NAME = 'InventoryDB';
 const STORE_NAME = 'items';
 let currentEditId = null;
+let currentDetailItem = null;
 let deferredPrompt = null;
 let isOnline = navigator.onLine;
 let currentUser = null;
@@ -324,21 +325,10 @@ function displayInventory(items) {
     }
 
     tbody.innerHTML = items.map(item => {
-        let lastCol;
-        if (isViewer) {
-            lastCol = `<td>${item.entry_by ? escapeHtml(item.entry_by) : '-'}</td>`;
-        } else {
-            const canEdit = isOperator() && item.user_id === currentUser.id;
-            lastCol = canEdit
-                ? `<td><div class="action-btns">
-                    <button class="btn btn-secondary" onclick="openEditModal(${item.id})">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete</button>
-                   </div></td>`
-                : `<td>${item.entry_by ? escapeHtml(item.entry_by) : '-'}</td>`;
-        }
+        const entryBy = item.entry_by ? escapeHtml(item.entry_by) : '-';
 
         return `
-        <tr>
+        <tr class="clickable" onclick="openItemDetailModal(${item.id})">
             <td><strong>${escapeHtml(item.description)}</strong></td>
             <td>${item.model ? escapeHtml(item.model) : '-'}</td>
             <td>${item.rv_number ? escapeHtml(item.rv_number) : '-'}</td>
@@ -347,7 +337,7 @@ function displayInventory(items) {
             <td>${item.amount ? '₱' + formatNumber(item.amount) : '-'}</td>
             <td>${item.date_acquired ? new Date(item.date_acquired).toLocaleDateString() : '-'}</td>
             <td>${item.acquired_by ? escapeHtml(item.acquired_by) : '-'}</td>
-            ${lastCol}
+            <td>${entryBy}</td>
         </tr>`;
     }).join('');
 }
@@ -663,22 +653,44 @@ async function toggleUserInventory(userId) {
             return;
         }
 
+        const isOwnAccount = Number(userId) === Number(currentUser.id);
         panel.innerHTML = `
             <table>
                 <thead>
                     <tr>
                         <th>Description</th>
-                        <th>Model</th>
+                        ${isOwnAccount ? '' : '<th>Model</th>'}
                         <th>RV#</th>
                         <th>Location</th>
                         <th>Amount</th>
                         <th>Acquired By</th>
                         <th>Date Entry</th>
+                        ${isOwnAccount ? '<th>Actions</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.items.map(item => `
-                        <tr>
+                    ${data.items.map(item => {
+                        const canModify = isOperator() && item.user_id === currentUser.id;
+                        if (isOwnAccount) {
+                            return `
+                        <tr class="clickable" onclick="openItemDetailModal(${item.id})">
+                            <td>${escapeHtml(item.description)}</td>
+                            <td>${item.rv_number ? escapeHtml(item.rv_number) : '-'}</td>
+                            <td>${item.location_installed ? escapeHtml(item.location_installed) : '-'}</td>
+                            <td>${item.amount ? '₱' + formatNumber(item.amount) : '-'}</td>
+                            <td>${item.acquired_by ? escapeHtml(item.acquired_by) : '-'}</td>
+                            <td>${item.date_entry ? new Date(item.date_entry).toLocaleDateString() : '-'}</td>
+                            <td>
+                                <div class="action-btns">
+                                    ${canModify ? `<button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); openEditModal(${item.id})">Edit</button>` : ''}
+                                    ${canModify ? `<button type="button" class="btn btn-danger" onclick="event.stopPropagation(); deleteItem(${item.id})">Delete</button>` : ''}
+                                </div>
+                            </td>
+                        </tr>`;
+                        }
+
+                        return `
+                        <tr class="clickable" onclick="openItemDetailModal(${item.id})">
                             <td>${escapeHtml(item.description)}</td>
                             <td>${item.model ? escapeHtml(item.model) : '-'}</td>
                             <td>${item.rv_number ? escapeHtml(item.rv_number) : '-'}</td>
@@ -686,8 +698,8 @@ async function toggleUserInventory(userId) {
                             <td>${item.amount ? '₱' + formatNumber(item.amount) : '-'}</td>
                             <td>${item.acquired_by ? escapeHtml(item.acquired_by) : '-'}</td>
                             <td>${item.date_entry ? new Date(item.date_entry).toLocaleDateString() : '-'}</td>
-                        </tr>
-                    `).join('')}
+                        </tr>`;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -883,6 +895,90 @@ function closeModal() {
     currentEditId = null;
 }
 
+function openItemDetailModal(itemId) {
+    if (!itemId) return;
+    if (!isOnline) {
+        showAlert('Viewing item details requires online connection', 'warning');
+        return;
+    }
+    // show modal immediately with a loading state to avoid perceived delay
+    document.getElementById('detailDescription').textContent = 'Loading...';
+    document.getElementById('detailModel').textContent = 'Loading...';
+    document.getElementById('detailSpecs').textContent = 'Loading...';
+    document.getElementById('detailRvNumber').textContent = 'Loading...';
+    document.getElementById('detailPoNumber').textContent = 'Loading...';
+    document.getElementById('detailDateAcquired').textContent = 'Loading...';
+    document.getElementById('detailAmount').textContent = 'Loading...';
+    document.getElementById('detailAcquiredBy').textContent = 'Loading...';
+    document.getElementById('detailLocationInstalled').textContent = 'Loading...';
+    document.getElementById('detailDateEntry').textContent = 'Loading...';
+    document.getElementById('detailEntryBy').textContent = 'Loading...';
+    document.getElementById('detailRemarks').textContent = 'Loading...';
+
+    // hide action buttons until data arrives
+    document.getElementById('detailEditBtn').style.display = 'none';
+    document.getElementById('detailDeleteBtn').style.display = 'none';
+
+    document.getElementById('itemDetailModal').classList.add('show');
+
+    apiFetch(`/api/inventory/${itemId}`)
+        .then(async response => {
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to load item details');
+            }
+            return response.json();
+        })
+        .then(item => {
+            currentDetailItem = item;
+            renderItemDetailModal(item);
+        })
+        .catch(error => {
+            console.error('Error loading item details:', error);
+            // close modal on errors to avoid showing stale UI
+            closeItemDetailModal();
+            if (error.message !== 'Session expired') {
+                showAlert(error.message, 'danger');
+            }
+        });
+}
+
+function renderItemDetailModal(item) {
+    document.getElementById('detailDescription').textContent = item.description || '-';
+    document.getElementById('detailModel').textContent = item.model || '-';
+    document.getElementById('detailSpecs').textContent = item.specs || '-';
+    document.getElementById('detailRvNumber').textContent = item.rv_number || '-';
+    document.getElementById('detailPoNumber').textContent = item.po_number || '-';
+    document.getElementById('detailDateAcquired').textContent = item.date_acquired ? new Date(item.date_acquired).toLocaleDateString() : '-';
+    document.getElementById('detailAmount').textContent = item.amount ? '₱' + formatNumber(item.amount) : '-';
+    document.getElementById('detailAcquiredBy').textContent = item.acquired_by || '-';
+    document.getElementById('detailLocationInstalled').textContent = item.location_installed || '-';
+    document.getElementById('detailDateEntry').textContent = item.date_entry ? new Date(item.date_entry).toLocaleDateString() : '-';
+    document.getElementById('detailEntryBy').textContent = item.entry_by || '-';
+    document.getElementById('detailRemarks').textContent = item.remarks || '-';
+
+    const canModify = isOperator() && item.user_id === currentUser.id;
+    document.getElementById('detailEditBtn').style.display = canModify ? 'inline-block' : 'none';
+    document.getElementById('detailDeleteBtn').style.display = canModify ? 'inline-block' : 'none';
+}
+
+function closeItemDetailModal() {
+    document.getElementById('itemDetailModal').classList.remove('show');
+    currentDetailItem = null;
+}
+
+function handleDetailEdit() {
+    if (!currentDetailItem) return;
+    const id = currentDetailItem.id;
+    closeItemDetailModal();
+    openEditModal(id);
+}
+
+function handleDetailDelete() {
+    if (!currentDetailItem) return;
+    deleteItem(currentDetailItem.id);
+}
+
 async function handleFormSubmit(e) {
     e.preventDefault();
     if (!isOperator()) return;
@@ -949,6 +1045,10 @@ async function deleteItem(id) {
         if (!response.ok) throw new Error('Failed to delete item');
 
         await deleteFromIndexedDB(id);
+
+        if (currentDetailItem && currentDetailItem.id === id) {
+            closeItemDetailModal();
+        }
 
         showAlert('Item deleted successfully!', 'success');
         loadInventory();
@@ -1110,5 +1210,6 @@ document.addEventListener('keydown', (e) => {
         closeModal();
         closeProfileModal();
         closePermanentDeleteModal();
+        closeItemDetailModal();
     }
 });

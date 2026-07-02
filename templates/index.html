@@ -177,6 +177,26 @@
             margin-bottom: 20px;
         }
 
+        .modal-field {
+            margin-bottom: 18px;
+        }
+
+        .modal-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .modal-field p {
+            margin: 0;
+            background: #f7f7f7;
+            padding: 12px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            min-height: 32px;
+        }
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -285,6 +305,10 @@
         .action-btns button {
             padding: 6px 12px;
             font-size: 12px;
+        }
+
+        .clickable {
+            cursor: pointer;
         }
 
         /* Stats */
@@ -950,6 +974,69 @@
                     <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Item Detail Modal -->
+    <div id="itemDetailModal" class="modal" onclick="if (event.target === this) closeItemDetailModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Item Details</h2>
+            </div>
+            <div id="itemDetailContent">
+                <div class="modal-field">
+                    <label>Description</label>
+                    <p id="detailDescription">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Model</label>
+                    <p id="detailModel">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Specifications</label>
+                    <p id="detailSpecs">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>RV #</label>
+                    <p id="detailRvNumber">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>PO #</label>
+                    <p id="detailPoNumber">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Date Acquired</label>
+                    <p id="detailDateAcquired">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Amount</label>
+                    <p id="detailAmount">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Acquired By</label>
+                    <p id="detailAcquiredBy">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Location Installed</label>
+                    <p id="detailLocationInstalled">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Date Entry</label>
+                    <p id="detailDateEntry">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Entry By</label>
+                    <p id="detailEntryBy">-</p>
+                </div>
+                <div class="modal-field">
+                    <label>Remarks</label>
+                    <p id="detailRemarks">-</p>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-top: 20px; justify-content: flex-end;">
+                <button type="button" class="btn btn-success" id="detailEditBtn" onclick="handleDetailEdit()">Edit</button>
+                <button type="button" class="btn btn-danger" id="detailDeleteBtn" onclick="handleDetailDelete()">Delete</button>
+            </div>
         </div>
     </div>
 
