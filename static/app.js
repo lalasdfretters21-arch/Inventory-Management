@@ -764,7 +764,7 @@ async function loadDeletedLogs() {
                 <td><strong>${escapeHtml(log.description || '-')}</strong></td>
                 <td>${log.rv_number ? escapeHtml(log.rv_number) : '-'}</td>
                 <td>${log.entry_by ? escapeHtml(log.entry_by) : '-'}</td>
-                <td>${log.deleted_by ? escapeHtml(log.deleted_by) : '-'}</td>
+                <td>${log.date_entry ? new Date(log.date_entry).toLocaleString() : '-'}</td>
                 <td>${log.deleted_at ? new Date(log.deleted_at).toLocaleString() : '-'}</td>
                 <td>
                     <div class="action-btns">

@@ -97,8 +97,7 @@ def init_db():
             date_entry TIMESTAMP,
             entry_by VARCHAR(255),
             user_id INT,
-            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            deleted_by VARCHAR(255)
+            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
 
         # Check if profile_pic column exists using PostgreSQL method
@@ -172,8 +171,7 @@ def ensure_schema():
             date_entry TIMESTAMP,
             entry_by VARCHAR(255),
             user_id INT,
-            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            deleted_by VARCHAR(255)
+            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         conn.commit()
         conn.close()
@@ -289,10 +287,10 @@ def get_current_user():
     c.execute(
         '''SELECT u.id, u.username, u.full_name, u.role, u.profile_pic, u.created_at,
                   COUNT(i.id) as item_count
-           FROM users u
-           LEFT JOIN inventory i ON i.user_id = u.id
-           WHERE u.id = %s
-           GROUP BY u.id''',
+            FROM users u
+            LEFT JOIN inventory i ON i.user_id = u.id
+            WHERE u.id = %s
+            GROUP BY u.id''',
         (session['user_id'],)
     )
     user = dict_from_row(c, c.fetchone())
@@ -646,7 +644,7 @@ def get_deleted_logs():
         conn = get_db_connection()
         c = conn.cursor()
         c.execute('''
-            SELECT id, original_id, description, rv_number, entry_by, deleted_by, deleted_at
+            SELECT id, original_id, description, rv_number, entry_by, date_entry, deleted_at
             FROM deleted_inventory
             ORDER BY deleted_at DESC
             LIMIT 100
@@ -932,18 +930,17 @@ def delete_inventory_item(item_id):
             conn.close()
             return jsonify({'error': 'You can only delete your own items'}), 403
 
-        deleted_by = session.get('full_name') or session.get('username')
         c.execute('''INSERT INTO deleted_inventory
             (original_id, description, model, specs, date_acquired, amount, rv_number,
              po_number, acquired_by, location_installed, remarks, date_entry, entry_by,
-             user_id, deleted_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+             user_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
             (
                 item.get('id'), item.get('description'), item.get('model'), item.get('specs'),
                 item.get('date_acquired'), item.get('amount'), item.get('rv_number'),
                 item.get('po_number'), item.get('acquired_by'), item.get('location_installed'),
                 item.get('remarks'), item.get('date_entry'), item.get('entry_by'),
-                item.get('user_id'), deleted_by
+                item.get('user_id')
             )
         )
 

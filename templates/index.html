@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#2c3e50">
     <title>IT Equipment Inventory System</title>
     <link rel="manifest" href="/static/manifest.json">
-    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232c3e50' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' text-anchor='middle' dominant-baseline='central' fill='white'>I</text></svg>">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232c3e50' width='192' height='192'/><text x='50%' y='50%' font-size='96' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>IMS</text></svg>">
     <style>
         * {
             margin: 0;
@@ -893,7 +893,7 @@
                                 <th>Description</th>
                                 <th>RV#</th>
                                 <th>Entry By</th>
-                                <th>Deleted By</th>
+                                <th>Date Entry</th>
                                 <th>Deleted At</th>
                                 <th>Actions</th>
                             </tr>
@@ -1032,87 +1032,106 @@
                     <label>Remarks</label>
                     <p id="detailRemarks">-</p>
                 </div>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap: wrap; margin-top: 20px; justify-content: flex-end;">
-                <button type="button" class="btn btn-success" id="detailEditBtn" onclick="handleDetailEdit()">Edit</button>
-                <button type="button" class="btn btn-danger" id="detailDeleteBtn" onclick="handleDetailDelete()">Delete</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Permanent Delete Modal -->
-    <div id="permanentDeleteModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Permanently Delete Item</h2>
-                <button class="close-btn" onclick="closePermanentDeleteModal()">&times;</button>
-            </div>
-            <form onsubmit="confirmPermanentDelete(event)">
-                <div style="background: #fdf2f2; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                    <p style="color: #721c24; font-size: 13px; margin: 0;">
-                        ⚠️ <strong>Warning:</strong> This action will permanently delete the item from the deletion logs. This cannot be undone.
-                    </p>
+                <div style="display: flex; gap: 8px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="detailEditBtn" onclick="handleDetailEdit()" style="flex: 1; display: none;">Edit</button>
+                    <button type="button" class="btn btn-danger" id="detailDeleteBtn" onclick="handleDetailDelete()" style="flex: 1; display: none;">Delete</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeItemDetailModal()" style="flex: 1;">Close</button>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-danger" style="flex: 1;">Permanently Delete</button>
-                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closePermanentDeleteModal()">Cancel</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Profile Modal -->
-    <div id="profileModal" class="modal">
+    <div id="profileModal" class="modal" onclick="if (event.target === this) closeProfileModal()">
         <div class="modal-content profile-modal-content">
             <div class="modal-header">
                 <h2>My Profile</h2>
                 <button class="close-btn" onclick="closeProfileModal()">&times;</button>
             </div>
 
+            <!-- Avatar Section -->
             <div class="profile-avatar-section">
-                <div id="profileAvatarPreview" class="profile-avatar-preview placeholder">?</div>
-                <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp">
+                <div class="profile-avatar-preview" id="profileAvatarPreview">?</div>
                 <div class="profile-avatar-actions">
-                    <button type="button" class="btn btn-primary" onclick="document.getElementById('avatarInput').click()">Change Photo</button>
-                    <button type="button" class="btn btn-secondary" id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;">Remove Photo</button>
+                    <input type="file" id="avatarInput" accept="image/*">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()" style="font-size: 12px;">Upload Photo</button>
+                    <button type="button" class="btn btn-danger" id="removeAvatarBtn" onclick="removeAvatar()" style="font-size: 12px; display: none;">Remove</button>
                 </div>
+                <div class="profile-meta" id="profileMeta"></div>
             </div>
 
-            <div class="profile-meta" id="profileMeta"></div>
-
-            <form id="profileForm" onsubmit="handleProfileSubmit(event)">
-                <div class="profile-section">
-                    <h3>Account Details</h3>
-                    <div class="form-group">
+            <!-- Profile Info Section -->
+            <div class="profile-section">
+                <h3>Account Information</h3>
+                <form onsubmit="handleProfileSubmit(event)">
+                    <div class="modal-field">
                         <label for="profileUsername">Username</label>
-                        <input type="text" id="profileUsername" required placeholder="Your username">
+                        <input type="text" id="profileUsername" required>
                     </div>
-                    <div class="form-group">
+                    <div class="modal-field">
                         <label for="profileFullName">Full Name</label>
-                        <input type="text" id="profileFullName" required placeholder="Your display name">
+                        <input type="text" id="profileFullName" required>
                     </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%;">Save Changes</button>
-                </div>
-            </form>
+                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 12px;">Update Profile</button>
+                </form>
+            </div>
 
-            <form id="passwordForm" onsubmit="handlePasswordSubmit(event)">
-                <div class="profile-section">
-                    <h3>Change Password</h3>
-                    <div class="form-group">
+            <!-- Change Password Section -->
+            <div class="profile-section">
+                <h3>Change Password</h3>
+                <form onsubmit="handlePasswordSubmit(event)">
+                    <div class="modal-field">
                         <label for="currentPassword">Current Password</label>
-                        <input type="password" id="currentPassword" required placeholder="Enter current password">
+                        <input type="password" id="currentPassword" required>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" required minlength="6" placeholder="At least 6 characters">
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirm Password</label>
-                            <input type="password" id="confirmPassword" required minlength="6" placeholder="Confirm new password">
-                        </div>
+                    <div class="modal-field">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" required minlength="6">
                     </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%;">Change Password</button>
+                    <div class="modal-field">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 12px;">Change Password</button>
+                </form>
+            </div>
+
+            <!-- Delete Account Section -->
+            <div class="profile-section">
+                <h3>Danger Zone</h3>
+                <div class="profile-danger-zone">
+                    <p id="deleteAccountWarning" style="display: none;"></p>
+                    <p>Deleting your account is permanent and cannot be undone.</p>
+                    <form onsubmit="async (e) => { e.preventDefault(); if (!confirm('Are you absolutely sure? This cannot be undone!')) return; const response = await apiFetch('/api/auth/me', {method: 'DELETE', body: JSON.stringify({password: document.getElementById('deletePassword').value})}); const data = await response.json(); if (!response.ok) { showAlert(data.error || 'Failed to delete account', 'danger'); return; } showAlert('Account deleted successfully', 'success'); setTimeout(() => logout(), 2000); }">
+                        <div class="modal-field">
+                            <label for="deletePassword">Confirm with your password</label>
+                            <input type="password" id="deletePassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger" id="deleteAccountBtn" style="width: 100%; margin-top: 12px;">Delete My Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permanent Delete Modal -->
+    <div id="permanentDeleteModal" class="modal" onclick="if (event.target === this) closePermanentDeleteModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Permanently Delete Item</h2>
+                <button class="close-btn" onclick="closePermanentDeleteModal()">&times;</button>
+            </div>
+            <form onsubmit="confirmPermanentDelete(event)">
+                <div class="modal-field">
+                    <p style="color: #e74c3c; font-weight: 600;">This action cannot be undone. The item will be permanently removed from the deletion logs.</p>
+                </div>
+                <div class="modal-field">
+                    <label>Reason for permanent deletion (optional)</label>
+                    <textarea id="permanentDeleteModal" placeholder="Enter reason..."></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-danger" style="flex: 1;">Permanently Delete</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closePermanentDeleteModal()">Cancel</button>
                 </div>
             </form>
         </div>
