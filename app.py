@@ -3,6 +3,7 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from psycopg2 import Error
+from psycopg2.extras import RealDictCursor
 import os
 import glob
 from datetime import datetime
@@ -37,8 +38,8 @@ def get_db_connection():
         database_url = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
         if database_url:
             # psycopg2.connect accepts a connection string (DSN/URL) directly
-            return psycopg2.connect(database_url)
-        conn = psycopg2.connect(**DB_CONFIG)
+            return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(cursor_factory=RealDictCursor, **DB_CONFIG)
         return conn
     except Error as err:
         print(f"Error connecting to PostgreSQL: {err}")
@@ -187,6 +188,9 @@ def dict_from_row(cursor, row):
     """Convert cursor result to dictionary"""
     if row is None:
         return None
+    # If RealDictCursor is used, rows are already dicts
+    if isinstance(row, dict):
+        return row
     return dict(zip([desc[0] for desc in cursor.description], row))
 
 def validate_inventory_item(data):
@@ -614,12 +618,12 @@ def admin_create_user():
     c = conn.cursor()
     try:
         c.execute(
-            'INSERT INTO users (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)',
+            'INSERT INTO users (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s) RETURNING id',
             (username, generate_password_hash(password), full_name, 'admin')
         )
+        user_row = c.fetchone()
+        user_id = user_row['id'] if isinstance(user_row, dict) else user_row[0]
         conn.commit()
-        c.execute("SELECT LASTVAL()")
-        user_id = c.fetchone()[0]
         conn.close()
         return jsonify({
             'message': 'Admin account created successfully',
@@ -828,7 +832,7 @@ def create_inventory_item():
         c.execute('''INSERT INTO inventory
             (description, model, specs, date_acquired, amount, rv_number,
              po_number, acquired_by, location_installed, remarks, entry_by, user_id, date_entry)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id''',
             (
                 data.get('description'),
                 data.get('model'),
@@ -846,10 +850,11 @@ def create_inventory_item():
             )
         )
 
+        # get returned id
+        row = c.fetchone()
+        item_id = row['id'] if isinstance(row, dict) else row[0]
+
         conn.commit()
-        # PostgreSQL way to get last insert ID
-        c.execute("SELECT LASTVAL()")
-        item_id = c.fetchone()[0]
         conn.close()
 
         return jsonify({'id': item_id, 'message': 'Item created successfully'}), 201
